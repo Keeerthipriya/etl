@@ -1,23 +1,42 @@
-import sqlite3
+from sqlalchemy import Column, Integer, String, DateTime
 from datetime import datetime
+from db import Base, engine, SessionLocal
 
+# -----------------------------
+# LOG TABLE MODEL
+# -----------------------------
+class ETLLog(Base):
+    __tablename__ = "etl_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    file_name = Column(String)
+    raw_count = Column(Integer)
+    clean_count = Column(Integer)
+    agg_count = Column(Integer)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+
+
+# -----------------------------
+# CREATE TABLE
+# -----------------------------
+def create_log_table():
+    Base.metadata.create_all(bind=engine)
+
+
+# -----------------------------
+# INSERT LOG
+# -----------------------------
 def log_etl(file_name, raw_count, clean_count, agg_count):
-    conn = sqlite3.connect("retail.db")
-    cursor = conn.cursor()
 
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS etl_logs (
-        file_name TEXT,
-        raw_count INTEGER,
-        clean_count INTEGER,
-        agg_count INTEGER,
-        timestamp TEXT
+    session = SessionLocal()
+
+    log = ETLLog(
+        file_name=file_name,
+        raw_count=raw_count,
+        clean_count=clean_count,
+        agg_count=agg_count
     )
-    """)
 
-    cursor.execute("""
-    INSERT INTO etl_logs VALUES (?, ?, ?, ?, ?)
-    """, (file_name, raw_count, clean_count, agg_count, datetime.now()))
-
-    conn.commit()
-    conn.close()
+    session.add(log)
+    session.commit()
+    session.close()

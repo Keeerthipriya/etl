@@ -1,62 +1,69 @@
-import sqlite3
+from sqlalchemy import create_engine, Column, String, Integer, Float, Date, text
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-DB_NAME = "retail.db"
+# DATABASE
+DATABASE_URL = "sqlite:///retail.db"
 
-def get_connection():
-    return sqlite3.connect(DB_NAME)
+engine = create_engine(DATABASE_URL, echo=False)
+SessionLocal = sessionmaker(bind=engine)
 
+Base = declarative_base()
+
+# -----------------------------
+# TABLES
+# -----------------------------
+
+class RawSales(Base):
+    __tablename__ = "raw_sales"
+
+    order_id = Column(String, primary_key=True)
+    order_date = Column(String)
+    store_id = Column(String)
+    product_id = Column(String)
+    category = Column(String)
+    quantity = Column(Integer)
+    unit_price = Column(Float)
+    file_name = Column(String)
+
+
+class CleanSales(Base):
+    __tablename__ = "clean_sales"
+
+    order_id = Column(String, primary_key=True)
+    order_date = Column(Date)
+    store_id = Column(String)
+    product_id = Column(String)
+    category = Column(String)
+    quantity = Column(Integer)
+    unit_price = Column(Float)
+    total_amount = Column(Float)
+    order_month = Column(String)
+    order_day = Column(String)
+    file_name = Column(String)
+
+
+class AggSales(Base):
+    __tablename__ = "agg_sales"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    store_id = Column(String)
+    category = Column(String)
+    order_month = Column(String)
+    total_sales = Column(Float)
+
+
+# -----------------------------
+# CREATE TABLES + VIEW
+# -----------------------------
 def create_tables():
-    conn = get_connection()
-    cursor = conn.cursor()
+    Base.metadata.create_all(bind=engine)
 
-    # RAW TABLE
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS raw_sales (
-        order_id TEXT,
-        order_date TEXT,
-        store_id TEXT,
-        product_id TEXT,
-        category TEXT,
-        quantity INTEGER,
-        unit_price REAL,
-        file_name TEXT
-    )
-    """)
-
-    # CLEAN TABLE
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS clean_sales (
-        order_id TEXT,
-        order_date DATE,
-        store_id TEXT,
-        product_id TEXT,
-        category TEXT,
-        quantity INTEGER,
-        unit_price REAL,
-        total_amount REAL,
-        order_month TEXT,
-        order_day TEXT,
-        file_name TEXT
-    )
-    """)
-
-    # AGG TABLE
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS agg_sales (
-        store_id TEXT,
-        category TEXT,
-        order_month TEXT,
-        total_sales REAL
-    )
-    """)
-
-    # VIEW
-    cursor.execute("""
-    CREATE VIEW IF NOT EXISTS sales_summary_view AS
-    SELECT order_month, SUM(total_amount) as total_sales
-    FROM clean_sales
-    GROUP BY order_month
-    """)
-
-    conn.commit()
-    conn.close()
+    # CREATE VIEW
+    with engine.connect() as conn:
+        conn.execute(text("""
+        CREATE VIEW IF NOT EXISTS sales_summary_view AS
+        SELECT order_month, SUM(total_amount) as total_sales
+        FROM clean_sales
+        GROUP BY order_month
+        """))

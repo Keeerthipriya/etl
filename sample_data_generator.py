@@ -13,7 +13,7 @@ def generate_data(n=100):
     }
 
     df = pd.DataFrame(data)
-    df.to_csv("sample_data.csv", index=False)
+    df.to_excel("sample_data.xlsx", index=False)
 
 # 👉 CALL THE FUNCTION
 generate_data(200)
